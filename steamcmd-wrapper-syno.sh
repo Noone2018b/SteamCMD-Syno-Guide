@@ -21,6 +21,8 @@
 # - Added download throttling setting
 # - Removed pipe to 'less' on line 60 (not in SteamCMD docker container)... but 'more' is OK.
 # - Removed "rm -rf "${TEMP_DIRECTORY}"", otherwise downloads cannot be resumed. (Hopefully won't cause any issues!)
+# - Removed lines 351-356 validation step - this just trigger a second full download on testing!
+# TODO - replace rsync commands, or add to Docker container.
 
 # Syno modded values
 STEAMCMD_ROOT="/home/steam/steamcmd"  # For cm2network/steamcmd Docker container
@@ -315,7 +317,8 @@ download_game_files()
 	if ${STEAMCMD_ROOT}/steamcmd.sh +@sSteamCmdForcePlatformType \
 	${PLATFORM} +login ${STEAM_LOGIN_NAME} +force_install_dir ${TEMP_DIRECTORY} \
 	+set_download_throttle ${DOWNLOAD_THROTTLE} \
-	+app_license_request ${GAME_APP_ID} +app_update ${GAME_APP_ID} validate +quit; then
+	+app_update ${GAME_APP_ID} validate +quit; then
+	# +app_license_request ${GAME_APP_ID} +app_update ${GAME_APP_ID} validate +quit; then
 
 		echo "Temp directory contents:"
 		ls -la "${TEMP_DIRECTORY}"
@@ -348,15 +351,15 @@ download_game_files()
 	# Validate game files to slap Steam out of a daze and realize it has a new game
 	# The app manifest should be enough, but the idea here is to avoid having to
 	# click install or restart steam
-	if ${STEAMCMD_ROOT}/steamcmd.sh +@sSteamCmdForcePlatformType \
-	${PLATFORM} +set_download_throttle ${DOWNLOAD_THROTTLE} \
-	+login ${STEAM_LOGIN_NAME} +app_update ${GAME_APP_ID} \
-	-validate +quit; then
-		echo "Game validated"
-	else
-		echo "Game cold not be validated!"
-		exit 1
-	fi
+	# if ${STEAMCMD_ROOT}/steamcmd.sh +@sSteamCmdForcePlatformType \
+	# ${PLATFORM} +set_download_throttle ${DOWNLOAD_THROTTLE} \
+	# +login ${STEAM_LOGIN_NAME} +app_update ${GAME_APP_ID} \
+	# -validate +quit; then
+	# 	echo "Game validated"
+	# else
+	# 	echo "Game cold not be validated!"
+	# 	exit 1
+	# fi
 
 }
 

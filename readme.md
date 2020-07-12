@@ -7,7 +7,7 @@ Dev
 
 ## Why?
 
-If you want to download large game files in the background, on your NAS. And if you like playing messing around. I couldn't find much info on this recently, so here's a quick guide to the essentials.
+If you want to download large game files in the background, on your NAS. And if you like playing messing around. I couldn't find much info on this online recently (July 2020), so here's a quick guide to the essentials, as I work them out.
 
 ## Overview
 
@@ -16,17 +16,33 @@ For this, you can use [SteamCMD, Steam's command-line client](https://developer.
 
 ## Set-up
 
+### Method 1 - Use Docker
+
 1. Install [Docker SteamCMD container (I used the **cm2network/steamcmd** one, others are available)](https://registry.hub.docker.com/r/cm2network/steamcmd) (direct SteamCMD installation on Synology DSM should also be possible - not yet tested). Use the Docker DSM GUI (Image > Add, from URL or downloaded file), or shell commands, to install.
 
 2. Mount external storage for the container. In the Docker DSM GUI this is under Container > Edit > Mount settings when container is NOT running. This is where you'll put the files on your NAS, e.g. the share `/docker/steam`. Without this everything will stay in the container (and may not be persistent with container restart), defaulting to the path `/home/steam/Steam/steamapps`.
 
+### Method 2 - Local install
+
+I tried this after already testing the Docker method, on the assumption it would be problematic - but it worked just as on a normal Linux machine, with the [standard installation method](https://danielgibbs.co.uk/2014/02/steamcmd/) (see also [the Valve guide](https://developer.valvesoftware.com/wiki/SteamCMD)).
+
+1. SSH into your NAS to get a terminal [see this guide if this doesn't mean anything to you](https://www.synoforum.com/resources/how-to-ssh-into-a-nas.76/).
+2. Create the install directory, the defult is `~/steamcmd`.
+3. Download the files `wget http://media.steampowered.com/installer/steamcmd_linux.tar.gz`.
+4. Untar `tar -xvzf steamcmd_linux.tar.gz`.
+5. Run `./steamcmd.sh +login anonymous`... if all is well this will launch an update process, and launch SteamCMD.
+
+**Note: I didn't try downloading with this instance of SteamCMD yet, although getting app info seems to work OK. **
+
+
 ## Basic use
 
-Via Docker DSM GUI
+Via Docker DSM GUI (i.e. via the Synology DSM web interface)
 
-1. Run Docker container.
-2. Navigate to terminal tab.
-3. Use this to run SteamCMD commands.
+1. Fire up Docker.
+2. Run Docker container.
+3. Navigate to terminal tab.
+4. Use this to run SteamCMD commands.
 
 Via terminal
 

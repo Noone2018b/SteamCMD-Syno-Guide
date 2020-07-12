@@ -74,6 +74,8 @@ To check the progress of your download you can do one/all of the following:
 * Run the usual Steam GUI on another machine - if the **cm2network/steamcmd** host is picked up (you'll see the usual Steam message at the bottom right of your screen regarding available hosts), then the download progress should also show up in your game library list in the usual way (this was a little intermittent for me however).
 * Check the file size in the target directory.
 
+Note: in quick testing it's not clear if SteamCMD picks up partially downloaded content if interrupted. One would hope so, but it may not - TBC.
+
 
 # Options & additions
 
@@ -97,6 +99,7 @@ To run:
 * Run from within your Docker container.
   * Game info: `steamcmd-wrapper-syno.sh -i <appID>`
   * Download a game: `steamcmd-wrapper-syno.sh -g <appID> -p <platform>`
+
 
 
 

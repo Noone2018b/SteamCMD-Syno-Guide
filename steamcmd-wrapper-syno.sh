@@ -20,7 +20,7 @@
 # - Edited paths for Syno Docker install defaults
 # - Added download throttling setting
 # - Removed pipe to 'less' on line 60 (not in SteamCMD docker container)... but 'more' is OK.
-#
+# - Removed "rm -rf "${TEMP_DIRECTORY}"", otherwise downloads cannot be resumed. (Hopefully won't cause any issues!)
 
 # Syno modded values
 STEAMCMD_ROOT="/home/steam/steamcmd"  # For cm2network/steamcmd Docker container
@@ -297,7 +297,7 @@ download_game_files()
 
 	mkdir -p "${FINAL_DIRECTORY}"
 
-	rm -rf "${TEMP_DIRECTORY}"
+	# rm -rf "${TEMP_DIRECTORY}"
 	mkdir -p "${TEMP_DIRECTORY}"
 
 	# run steamcmd

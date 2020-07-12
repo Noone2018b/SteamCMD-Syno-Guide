@@ -14,15 +14,18 @@
 #
 # ****************************
 # Synology DSM Docker version
-# Quick mod. by Noone
-# See
+# Quick mod. by Noone2018b
+# See https://github.com/Noone2018b/SteamCMD-Syno-Guide
 #
 # - Edited paths for Syno Docker install defaults
+# - Added download throttling setting
+# - Removed pipe to 'less' on line 60 (not in SteamCMD docker container)... but 'more' is OK.
 #
 
 # Syno modded values
 STEAMCMD_ROOT="/home/steam/steamcmd"  # For cm2network/steamcmd Docker container
 TEMP_DIRECTORY="/downloads/steamcmd_tmp"  # Set here for external mount /downloads.
+DOWNLOAD_THROTTLE=2500  # Set download speed in kbps, set to -1 for unlimited
 
 # Set dirs for "installed" games.
 # These are used to tidy the downloads into the usual Steam dir structure.
@@ -55,7 +58,7 @@ get_appid_info()
 {
 
 	# TODO - parse JSON
-	${STEAMCMD_ROOT}/steamcmd.sh +app_info_print ${GAME_APP_ID} +quit | less
+	${STEAMCMD_ROOT}/steamcmd.sh +app_info_print ${GAME_APP_ID} +quit | more
 
 }
 
@@ -311,6 +314,7 @@ download_game_files()
 
 	if ${STEAMCMD_ROOT}/steamcmd.sh +@sSteamCmdForcePlatformType \
 	${PLATFORM} +login ${STEAM_LOGIN_NAME} +force_install_dir ${TEMP_DIRECTORY} \
+	+set_download_throttle ${DOWNLOAD_THROTTLE} \
 	+app_license_request ${GAME_APP_ID} +app_update ${GAME_APP_ID} validate +quit; then
 
 		echo "Temp directory contents:"
@@ -345,7 +349,8 @@ download_game_files()
 	# The app manifest should be enough, but the idea here is to avoid having to
 	# click install or restart steam
 	if ${STEAMCMD_ROOT}/steamcmd.sh +@sSteamCmdForcePlatformType \
-	${PLATFORM} +login ${STEAM_LOGIN_NAME} +app_update ${GAME_APP_ID} \
+	${PLATFORM} +set_download_throttle ${DOWNLOAD_THROTTLE} \
+	+login ${STEAM_LOGIN_NAME} +app_update ${GAME_APP_ID} \
 	-validate +quit; then
 		echo "Game validated"
 	else

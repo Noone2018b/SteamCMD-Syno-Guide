@@ -21,13 +21,24 @@
 # - Added download throttling setting
 # - Removed pipe to 'less' on line 60 (not in SteamCMD docker container)... but 'more' is OK.
 # - Removed "rm -rf "${TEMP_DIRECTORY}"", otherwise downloads cannot be resumed. (Hopefully won't cause any issues!)
+#			EDIT: looks like resuming downloads is not possible with SteamCMD.
 # - Removed lines 351-356 validation step - this just trigger a second full download on testing!
-# TODO - replace rsync commands, or add to Docker container.
+#			EDIT: actually, issue was missing rsync in Docker tests, now fixed.
+# - Added check for rsync and alternative basic mv command if missing.
+# - Added /PLATFORM/ to final dir location.
+#
+# TODO
+# - improve replacement mv commands, or add to Docker container.
+#
+#
+#
 
 # Syno modded values
 STEAMCMD_ROOT="/home/steam/steamcmd"  # For cm2network/steamcmd Docker container
 TEMP_DIRECTORY="/downloads/steamcmd_tmp"  # Set here for external mount /downloads.
 DOWNLOAD_THROTTLE=2500  # Set download speed in kbps, set to -1 for unlimited
+
+PLATFORM="windows"  # Set default platform, can override with -p switch at runtime.
 
 # Set dirs for "installed" games.
 # These are used to tidy the downloads into the usual Steam dir structure.
@@ -295,9 +306,9 @@ download_game_files()
 	#
 	# fi
 
-	FINAL_DIRECTORY="${STEAM_ROOT}/Steam/steamapps/common/${INSTALL_DIR}"  # Syno mod
+	FINAL_DIRECTORY="${STEAM_ROOT}/Steam/steamapps/common/${PLATFORM}/${INSTALL_DIR}"  # Syno mod
 
-	mkdir -p "${FINAL_DIRECTORY}"
+	# mkdir -p "${FINAL_DIRECTORY}"
 
 	# rm -rf "${TEMP_DIRECTORY}"
 	mkdir -p "${TEMP_DIRECTORY}"
@@ -309,6 +320,7 @@ download_game_files()
 	Steam login: ${STEAM_LOGIN_NAME}
 	TEMP_DIRECTORY: ${TEMP_DIRECTORY}
 	FINAL_DIRECTORY: ${FINAL_DIRECTORY}
+	PLATFORM: ${PLATFORM}
 	_EOF_
 
 	read -erp "Press ENTER to continue..."
@@ -329,9 +341,18 @@ download_game_files()
 			echo "Copying over app manifest..."
 			sudo find "${MANIFEST_DIRECTORY}" -name "*.acf" -exec cp "${APP_MANIFEST_DIR} {}\;"
 		else
-			rsync -ra ${TEMP_DIRECTORY}/* "${FINAL_DIRECTORY}" --exclude "steamapps"
-			echo "Copying over app manifest..."
-			find "${MANIFEST_DIRECTORY}" -name "*.acf" -exec cp "${APP_MANIFEST_DIR} {} \;"
+			# Check for rsync, use mv if not present
+			# Alternative currently ignores app manifest file. This doesn't seem to matter.
+			if ! command -v rsync &> /dev/null; then
+				mv ${TEMP_DIRECTORY} "${FINAL_DIRECTORY}"
+
+			# Original version with rsycn
+			else
+				mkdir -p "${FINAL_DIRECTORY}"
+				rsync -ra ${TEMP_DIRECTORY}/* "${FINAL_DIRECTORY}" --exclude "steamapps"
+				echo "Copying over app manifest..."
+				find "${MANIFEST_DIRECTORY}" -name "*.acf" -exec cp "${APP_MANIFEST_DIR} {} \;"
+			fi
 		fi
 		echo -e "\nGame successfully downloaded to ${FINAL_DIRECTORY}"
 		echo "If your game did not appear, check you are in online mode and/or restart Steam"

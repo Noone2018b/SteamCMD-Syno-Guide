@@ -16,6 +16,8 @@ For this, you can use [SteamCMD, Steam's command-line client](https://developer.
 
 ## Set-up
 
+All methods tested on a DS1517 - your mileage may vary!
+
 ### Method 1 - Use Docker
 
 1. Install [Docker SteamCMD container (I used the **cm2network/steamcmd** one, others are available)](https://registry.hub.docker.com/r/cm2network/steamcmd) (direct SteamCMD installation on Synology DSM should also be possible - not yet tested). Use the Docker DSM GUI (Image > Add, from URL or downloaded file), or shell commands, to install.
@@ -37,12 +39,15 @@ I tried this after already testing the Docker method, on the assumption it would
 
 ## Basic use
 
-Via Docker DSM GUI (i.e. via the Synology DSM web interface)
+In all cases, you're going to input terminal commands to SteamCMD. This is either via the Docker container, or directly in your normal SSH terminal.
+
+### With Docker
+Via Docker DSM GUI (i.e. via the Synology DSM web interface). Firstly login to your web interface as normal, then:
 
 1. Fire up Docker.
 2. Run Docker container.
 3. Navigate to terminal tab.
-4. Use this to run SteamCMD commands.
+4. Use this terminal to run SteamCMD commands.
 
 Via terminal
 
@@ -50,15 +55,28 @@ Via terminal
 2. Connect to the container `sudo docker exec -it cm2network-steamcmd1 /bin/bash`
 3. Use this to run SteamCMD commands.
 
-For a basic SteamCMD test, and to establish Steam account connection, just run `./steamcmd.sh +login <username>`
+### With local install
+
+Via terminal
+
+1. Login to your NAS as usual with SSH, `ssh user@NAS`
+2. Use this to run SteamCMD commands.
+
+## Testing SteamCMD & getting game info
+
+For a basic SteamCMD test, and to establish Steam account connection, just run:
+
+`./steamcmd.sh +login <username>`
+
+at whichever terminal you've chosen from the options above.
 
 At the first go this will require a password, and two-factor authorisation (e.g. a Steam Guard code in your email). After that it should only need the username.
-
-## Getting game info
 
 As a quick test, try getting some game info from an appID.
 
 `./steamcmd.sh +app_info_print 70 +quit`
+
+This is a good test that everything is working, and you have the correct appID.
 
 TODO - it'd be good to parse this info, esp. for download size.
 
@@ -74,15 +92,17 @@ This can be [done interactively at the `STEAM>` prompt](https://developer.valves
 
 This requires a few things:
 
-* <steamCMD> is the SteamCMD root directory, e.g. `~/steamcmd` for the Docker container used here.
-* <user> is the account name. (This assumes you've already logged in once, as above).
-* <gameDIR> is where the download will be stored, probably of the form `<mount>/<game>`, e.g. `/downloads/Half-Life` if you mounted your container's storage to `/downloads`. See more notes on this below!
-* <OS> is the operating system for which you want the game: [windows | macos | linux]
-* <appID> is the ID of the game you want to download, you can find this from the Steam Store page link, or [via SteamDB](https://steamdb.info).
+* `<steamCMD>` is the SteamCMD root directory, e.g. `~/steamcmd` for the Docker container used here.
+* `<user>` is the account name. (This assumes you've already logged in once, as above).
+* `<gameDIR>` is where the download will be stored, probably of the form `<mount>/<game>`, e.g. `/downloads/Half-Life` if you mounted your container's storage to `/downloads`. See more notes on this below!
+* `<OS>` is the operating system for which you want the game: [windows | macos | linux]
+* `<appID>` is the ID number of the game you want to download, you can find this from the Steam Store page link, or [via SteamDB](https://steamdb.info).
 
 For a full list of command line options, see [the Valve wiki](https://developer.valvesoftware.com/wiki/Command_Line_Options#SteamCMD).
 
-To set download throttling, add a command: `+set_download_throttle <kbps>`. Note the units here! For me, on a typical countryside 5Mbit ADSL connection, something like 2500 kbps works well here, and shows average usage ~300 KB/s on my router's traffic monitor, with variation from ~200-400 KB/s (i.e. uses ~40-80% of my bandwidth, and leaves overhead to do other things!). Yes, my router has traffic management/shaping as an alternative to setting throttling here; no, it doesn't work all that well. Yes, it takes a long time to download large games... that's why I'm using my NAS!
+## Throttling & progress
+
+To set download throttling, add a command: `+set_download_throttle <kbps>`. Note the units here! For me, on a typical countryside 5Mbit ADSL connection, something like 2500 kbps works well here, and shows average usage ~300 KB/s on my router's traffic monitor, with variation from ~200-400 KB/s (i.e. uses roughly ~40-80% of my bandwidth, and leaves overhead to do other things!). Yes, my router has traffic management/shaping as an alternative to setting throttling here; no, it doesn't work all that well if you are at your bandwidth limit (there will always be lags in this case). Yes, it takes a long time to download large games... that's why I'm using my NAS!
 
 To check the progress of your download you can do one/all of the following:
 
@@ -91,6 +111,25 @@ To check the progress of your download you can do one/all of the following:
 * Check the file size in the target directory.
 
 Note: in quick testing it's not clear if SteamCMD picks up partially downloaded content if interrupted. One would hope so, but it may not - TBC.
+EDIT: after some quick seraching, it seems like SteamCMD can't resume partial downloads, sigh. A manual work-around is probably to go low-level, and pull game `depots` individually, or set-up a cache server as discussed below.
+
+## Download location
+
+The `<gameDIR>` passed to SteamCMD is used to dump all the game files. For acutally running the game on another machine via Steam, this will need to be moved/renamed "correctly" - i.e. to the directory Steam expects. This is given in the app info.
+
+A quick way to check this is:
+
+`./steamcmd.sh +app_info_print ${GAME_APP_ID} +quit | awk -F'"' '/installdir/ {print $4}'`
+
+Which should provide the correct directory name, as it should appear in the usual Steam Library installation location (e.g. `/Steam/steamapps/common/<gameDIR>`)
+
+(Line curtesy of [mdeguzis/ProfessorKaos64's SteamCMD-wrapper](https://github.com/mdeguzis/steamcmd-wrapper), see more notes below on using this script directly.)
+
+## Installation on your gaming PC
+
+Simply copy the game to the Steam Library (e.g. `~/Steam/steamapps/common/<gameDIR>`) on your gaming machine, making sure that the game dir is correctly named. Then hit "install" in Steam, and it should pick up the existing files and get things ready to play.
+
+Note that this seems to work OK without the app manifest (.acf file), but you may want to copy this over too. They live in the root
 
 
 # Options & additions
@@ -98,14 +137,14 @@ Note: in quick testing it's not clear if SteamCMD picks up partially downloaded 
 A few more sophisticated shell scripts for automating some of the process.
 
 ## SteamCMD-wrapper
-Shell script for downloads (and some other things), from mdeguzis/ProfessorKaos64 including correcting install dir: https://github.com/mdeguzis/steamcmd-wrapper
+[Shell script for downloads (and some other things), from mdeguzis/ProfessorKaos64](https://github.com/mdeguzis/steamcmd-wrapper) including correcting install dir.
 
 - Basic game info function (no JSON parsing)
 
 - Install dir name routine. This grabs the correct name from SteamCMD game info, as so:
 `./steamcmd.sh +app_info_print ${GAME_APP_ID} +quit | awk -F'"' '/installdir/ {print $4}'`
 
-There's a quick-hack -syno version of this script in this repo, with the paths changed slightly for use with the Docker container.
+There's a quick-hack `-syno` version of this script in this repo, with the paths changed slightly for use with the Docker container.
 
 To run:
 
@@ -115,6 +154,8 @@ To run:
 * Run from within your Docker container.
   * Game info: `steamcmd-wrapper-syno.sh -i <appID>`
   * Download a game: `steamcmd-wrapper-syno.sh -g <appID> -p <platform>`
+
+Downloaded files will appear in `FINAL_DIRECTORY="${STEAM_ROOT}/Steam/steamapps/common/${PLATFORM}/${INSTALL_DIR}"`, where `${STEAM_ROOT}` is as set at the top of the script. I've added `${PLATFORM}` to the path since I'm often downloading both windows and linux versions of things.
 
 
 
@@ -141,6 +182,19 @@ There's a short script for this at https://github.com/JuanMadness/VaporScript, w
 
 A very cool thing to do, if one is so inclined, and quite easy with Docker. There's a good [Ars article on this](https://arstechnica.com/gaming/2017/01/building-a-local-steam-caching-server-to-ease-the-bandwidth-blues/), and it looks like the [Monolithic container](http://lancache.net/docs/containers/monolithic/) is probably the thing to try.
 
+For me, there's currently two clear reasons for this (for the Syno download case):
+
+1. Easily & transparently install and share files between multiple gaming PCs (no additional manual copying required).
+2. Should allow for SteamCMD to resume downloads, since already downloaded content will be in the cache.
+
+
 ## Use python
 
 I've stuck to shell scripts above, since they're pretty robust and work in the minimal Docker SteamCMD container. But it'd be nice to use python, since it's lovely. There's a [basic wrapper at pysteamcmd](https://github.com/f0rkz/pysteamcmd), which should be a good place to start.
+
+# To do
+
+- Tidy up these scripts and add some more Syno customisations.
+- Dedicated install backup dir for keeping things tidy?
+- Method for pulling appIDs and full library list?
+- Following above, automated bulk downloading.

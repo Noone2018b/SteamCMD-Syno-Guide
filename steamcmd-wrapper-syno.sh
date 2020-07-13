@@ -344,6 +344,7 @@ download_game_files()
 			# Check for rsync, use mv if not present
 			# Alternative currently ignores app manifest file. This doesn't seem to matter.
 			if ! command -v rsync &> /dev/null; then
+				mkdir -p "${STEAM_ROOT}/Steam/steamapps/common/${PLATFORM}" # Make sure this exists, otherwise move will fail.
 				mv ${TEMP_DIRECTORY} "${FINAL_DIRECTORY}"
 
 			# Original version with rsycn

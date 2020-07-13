@@ -22,7 +22,7 @@ All methods tested on a DS1517 - your mileage may vary!
 
 1. Install [Docker SteamCMD container (I used the **cm2network/steamcmd** one, others are available)](https://registry.hub.docker.com/r/cm2network/steamcmd) (direct SteamCMD installation on Synology DSM should also be possible - not yet tested). Use the Docker DSM GUI (Image > Add, from URL or downloaded file), or shell commands, to install.
 
-2. Mount external storage for the container. In the Docker DSM GUI this is under Container > Edit > Mount settings when container is NOT running. This is where you'll put the files on your NAS, e.g. the share `/docker/steam`. Without this everything will stay in the container (and may not be persistent with container restart), defaulting to the path `/home/steam/Steam/steamapps`.
+2. Mount external storage for the container. In the Docker DSM GUI this is under Container > Edit > Mount settings when container is NOT running. This is where you'll put the files on your NAS, e.g. in my case, I mounted the directory `/docker/steam` to `/downloads` in the container. Without this everything will stay in the container (and may not be persistent with container restart), defaulting to the path `/home/steam/Steam/steamapps` in the container.
 
 ### Method 2 - Local install
 
@@ -53,7 +53,11 @@ Via terminal
 
 1. Login to your NAS as usual with SSH, `ssh user@NAS`
 2. Connect to the container `sudo docker exec -it cm2network-steamcmd1 /bin/bash`
-3. Use this to run SteamCMD commands.
+3. Use this terminal to run SteamCMD commands.
+
+There's lots of options here, see the [Docker run command page](https://docs.docker.com/engine/reference/run/) for more. In the example above, `-it` assigns this to a pseudo-tty, and leaves the process alive even if detached (e.g. if you turn off the system you SSH'd in from, or close the terminal).
+
+To do: fix logging here, if the local terminal is closed there should be a way to show these somewhere else, see [Docker logging notes](https://docs.docker.com/engine/reference/commandline/logs/). Currently they *don't* appear in the Docker DSM log tab.
 
 ### With local install
 
@@ -121,15 +125,15 @@ A quick way to check this is:
 
 `./steamcmd.sh +app_info_print ${GAME_APP_ID} +quit | awk -F'"' '/installdir/ {print $4}'`
 
-Which should provide the correct directory name, as it should appear in the usual Steam Library installation location (e.g. `/Steam/steamapps/common/<gameDIR>`)
+Which should provide the correct directory name, as it should appear in the usual Steam Library installation location (e.g. `/Steam/steamapps/common/<gameDIR>`).
 
 (Line curtesy of [mdeguzis/ProfessorKaos64's SteamCMD-wrapper](https://github.com/mdeguzis/steamcmd-wrapper), see more notes below on using this script directly.)
 
 ## Installation on your gaming PC
 
-Simply copy the game to the Steam Library (e.g. `~/Steam/steamapps/common/<gameDIR>`) on your gaming machine, making sure that the game dir is correctly named. Then hit "install" in Steam, and it should pick up the existing files and get things ready to play.
+Simply copy the game to the Steam Library (e.g. `~/.steam/steam/steamapps/common/<gameDIR>` on my linux box) on your gaming machine, making sure that the game dir is correctly named. Then hit "install" in Steam, and it should pick up the existing files and get things ready to play.
 
-Note that this seems to work OK without the app manifest (.acf file), but you may want to copy this over too. They live in the root
+Note that this seems to work OK without the app manifest (.acf file), but you may want to copy this over too. They live in the root steamapps dir, e.g. `~/.steam/steam/steamapps`.
 
 
 # Options & additions
@@ -137,14 +141,15 @@ Note that this seems to work OK without the app manifest (.acf file), but you ma
 A few more sophisticated shell scripts for automating some of the process.
 
 ## SteamCMD-wrapper
-[Shell script for downloads (and some other things), from mdeguzis/ProfessorKaos64](https://github.com/mdeguzis/steamcmd-wrapper) including correcting install dir.
+[Shell script for downloads (and some other things), from mdeguzis/ProfessorKaos64](https://github.com/mdeguzis/steamcmd-wrapper) including correcting the installation dir.
 
+This supports:
 - Basic game info function (no JSON parsing)
-
 - Install dir name routine. This grabs the correct name from SteamCMD game info, as so:
 `./steamcmd.sh +app_info_print ${GAME_APP_ID} +quit | awk -F'"' '/installdir/ {print $4}'`
+- Install routines for SteamCMD and game servers. I didn't try these functions.
 
-There's a quick-hack `-syno` version of this script in this repo, with the paths changed slightly for use with the Docker container.
+There's a quick-hack `-syno` version of this script in this repo, with the paths changed slightly for downloading with the Docker container.
 
 To run:
 
@@ -155,7 +160,7 @@ To run:
   * Game info: `steamcmd-wrapper-syno.sh -i <appID>`
   * Download a game: `steamcmd-wrapper-syno.sh -g <appID> -p <platform>`
 
-Downloaded files will appear in `FINAL_DIRECTORY="${STEAM_ROOT}/Steam/steamapps/common/${PLATFORM}/${INSTALL_DIR}"`, where `${STEAM_ROOT}` is as set at the top of the script. I've added `${PLATFORM}` to the path since I'm often downloading both windows and linux versions of things.
+Downloaded files will appear in `FINAL_DIRECTORY="${STEAM_ROOT}/Steam/steamapps/common/${PLATFORM}/${INSTALL_DIR}"`, where `${STEAM_ROOT}` is as set at the top of the script. I've added `${PLATFORM}` to the path since I'm often downloading both windows and linux versions of things. For many cases, there will be big overlap here (most game assets, presumably, are platform independent), but I didn't get into this yet.
 
 
 
@@ -166,7 +171,7 @@ https://github.com/tunbridgep/SteamCMDHelper
 
 ## Generate install list for your game library
 
-There's a script [for this from amildahl](https://github.com/amildahl/steamcmd_scripts). This uses SteamDB to grab a list of your games via http://steamdb.info/calculator/?player=<steamID>, which can then be used to automate downloads. This requires your games to be publically shared (i.e. they appear on SteamDB), BUT... it doesn't seem to work for me.
+There's a script [for this from amildahl](https://github.com/amildahl/steamcmd_scripts). This uses SteamDB to grab a list of your games via `http://steamdb.info/calculator/?player=<steamID>`, which can then be used to automate downloads. This requires your games to be publically shared (i.e. they appear on SteamDB), BUT... it doesn't seem to work for me.
 
 ## Full Steam AppID and Command lists
 
@@ -174,7 +179,7 @@ See dgibbs64's repos [SteamCMD-AppID-List](https://github.com/dgibbs64/SteamCMD-
 
 ## Run updates on installed games
 
-There's a short script for this at https://github.com/JuanMadness/VaporScript, which basically parses your `steamapps` folder for the AppIDs of installed games.
+There's a short script for this at https://github.com/JuanMadness/VaporScript, which basically parses your `steamapps` folder for the AppIDs of installed games (from the manifests). Depending on how you structure your downloads, it should be possible to point this at the correct set of manifests.
 
 # Advanced
 
